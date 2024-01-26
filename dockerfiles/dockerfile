@@ -1,0 +1,36 @@
+# Use an official Python runtime as a parent image
+FROM python:3.8-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory in the container to /workspace
+WORKDIR /workspace
+
+# Copy the requirements file into the container at /workspace
+COPY requirements.txt /workspace/
+
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Set up user to match the host user to avoid permission issues with mounted volumes
+ARG USERNAME=vscode
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
+
+# Switch to the created user
+USER $USERNAME
+
+# Copy the rest of your application's code
+COPY . /workspace
